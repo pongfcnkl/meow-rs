@@ -213,7 +213,10 @@ jobs:
           runtime_libdir="${GITHUB_WORKSPACE}/target/android-cxx-runtime"
           mkdir -p "${runtime_libdir}"
           cp "${cxx_libdir}/libc++_static.a" "${runtime_libdir}/"
-          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS=-Lnative=${runtime_libdir}" >> "$GITHUB_ENV"
+          # boring-sys's native link directive can precede the final C++
+          # objects. Repeat the archive as a final linker argument so static
+          # archive extraction happens after every reference is known.
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS=-Lnative=${runtime_libdir} -Clink-arg=${runtime_libdir}/libc++_static.a" >> "$GITHUB_ENV"
           echo "BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android=--target=aarch64-linux-android${{ matrix.android_api }} --sysroot=${sysroot} -I${sysroot}/usr/include/aarch64-linux-android" >> "$GITHUB_ENV"
           echo "${toolchain}" >> "$GITHUB_PATH"
 
