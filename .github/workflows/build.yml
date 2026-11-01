@@ -200,6 +200,7 @@ jobs:
           echo "AR_aarch64_linux_android=${toolchain}/llvm-ar" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=${ANDROID_NDK_LATEST_HOME}" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_ROOT=${ANDROID_NDK_LATEST_HOME}" >> "$GITHUB_ENV"
+          echo "BORING_BSSL_RUST_CPPLIB=static=c++_static" >> "$GITHUB_ENV"
           sysroot="${ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
           echo "BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android=--target=aarch64-linux-android${{ matrix.android_api }} --sysroot=${sysroot} -I${sysroot}/usr/include/aarch64-linux-android" >> "$GITHUB_ENV"
           echo "${toolchain}" >> "$GITHUB_PATH"
@@ -215,6 +216,18 @@ jobs:
             cargo zigbuild --release --locked --target ${{ matrix.target }} --bin meow
           else
             cargo build --release --locked --target ${{ matrix.target }} --bin meow
+          fi
+
+      - name: Check Android runtime dependencies
+        if: matrix.android
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="target/${{ matrix.target }}/release/meow"
+          llvm-readelf -d "${binary}" | tee /tmp/meow-android-dynamic.txt
+          if grep -q 'libc++_shared\.so' /tmp/meow-android-dynamic.txt; then
+            echo "::error::Android binary still depends on libc++_shared.so"
+            exit 1
           fi
 
       - name: Build meow-cli
