@@ -207,7 +207,13 @@ jobs:
             echo "::error::Android static libc++ not found under ${cxx_libdir}"
             exit 1
           fi
-          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS=-Lnative=${cxx_libdir}" >> "$GITHUB_ENV"
+          # Do not add cxx_libdir itself to rustc's search path: NDK 30 also
+          # puts a libc.a there, which shadows Android's system libc and
+          # duplicates Rust runtime symbols. Expose only the C++ archive.
+          runtime_libdir="${GITHUB_WORKSPACE}/target/android-cxx-runtime"
+          mkdir -p "${runtime_libdir}"
+          cp "${cxx_libdir}/libc++_static.a" "${runtime_libdir}/"
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS=-Lnative=${runtime_libdir}" >> "$GITHUB_ENV"
           echo "BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android=--target=aarch64-linux-android${{ matrix.android_api }} --sysroot=${sysroot} -I${sysroot}/usr/include/aarch64-linux-android" >> "$GITHUB_ENV"
           echo "${toolchain}" >> "$GITHUB_PATH"
 
