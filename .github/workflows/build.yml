@@ -104,6 +104,15 @@ jobs:
             runner: ubuntu-latest
             minimal_budget_bytes: 0
             minimal_soft_gate: true
+          # Android / Termux (64-bit ARM, Android API 24+). This is a CLI
+          # binary for Termux, not an APK; build it with the NDK toolchain
+          # provided by the GitHub-hosted Ubuntu runner.
+          - target: aarch64-linux-android
+            runner: ubuntu-latest
+            android: true
+            android_api: 24
+            minimal_budget_bytes: 0
+            minimal_soft_gate: true
           # Windows
           - target: x86_64-pc-windows-msvc
             runner: windows-latest
@@ -160,7 +169,7 @@ jobs:
           key: release-${{ matrix.target }}-zigbuild-0.23.2
 
       - name: Install cargo-zigbuild and zig
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && !matrix.android
         uses: mlugg/setup-zig@v1
         with:
           version: 0.13.0
@@ -172,13 +181,34 @@ jobs:
       # intermittently fails boring-sys's CMake compiler check on armv7.
       # Lift the pin once upstream builds the shim race-free.
       - run: cargo install --locked cargo-zigbuild --version 0.23.2
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && !matrix.android
+
+      - name: Configure Android NDK toolchain
+        if: matrix.android
+        shell: bash
+        run: |
+          set -euo pipefail
+          toolchain="${ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          linker="${toolchain}/aarch64-linux-android${{ matrix.android_api }}-clang"
+          cxx="${toolchain}/aarch64-linux-android${{ matrix.android_api }}-clang++"
+          if [ ! -x "${linker}" ] || [ ! -x "${cxx}" ]; then
+            echo "::error::Android NDK compiler not found under ${toolchain}"
+            exit 1
+          fi
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=${linker}" >> "$GITHUB_ENV"
+          echo "CC_aarch64_linux_android=${linker}" >> "$GITHUB_ENV"
+          echo "CXX_aarch64_linux_android=${cxx}" >> "$GITHUB_ENV"
+          echo "AR_aarch64_linux_android=${toolchain}/llvm-ar" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=${ANDROID_NDK_LATEST_HOME}" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=${ANDROID_NDK_LATEST_HOME}" >> "$GITHUB_ENV"
 
       - name: Build release binary
         shell: bash
         run: |
           # Default features = full (meow-app/Cargo.toml); TLS is BoringSSL.
-          if [ "${{ runner.os }}" = "Linux" ]; then
+          if [ "${{ matrix.android }}" = "true" ]; then
+            cargo build --release --locked --target ${{ matrix.target }} --bin meow
+          elif [ "${{ runner.os }}" = "Linux" ]; then
             cargo zigbuild --release --locked --target ${{ matrix.target }} --bin meow
           else
             cargo build --release --locked --target ${{ matrix.target }} --bin meow
