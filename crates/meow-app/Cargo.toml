@@ -101,6 +101,19 @@ full = [
     "logbook",
     "public-suffix",
 ]
+# Termux release bundle: the full CLI feature set except the TUN inbound.
+# Android VPN integrations inject traffic through the library path, while a
+# standalone Termux process cannot create/configure a VPN TUN device. Keeping
+# listener-tun out also avoids pulling the lwIP C build onto Android/bionic.
+termux = [
+    "ss", "trojan", "vless", "vless-vision", "vless-encryption", "vmess", "snell", "hysteria2", "anytls", "ech-tls-tunnel", "mux", "kcptun",
+    "shadow-tls", "restls", "jls", "gost-plugin",
+    "dns-server", "dns-encrypted",
+    "listener-http", "listener-socks5", "listener-mixed",
+    "listener-shadowsocks",
+    "logbook",
+    "public-suffix",
+]
 
 [[bin]]
 name = "meow"
