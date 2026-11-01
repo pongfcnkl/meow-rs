@@ -1057,6 +1057,30 @@ fn service_status() -> Result<()> {
     windows_service::status()
 }
 
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+fn install_service(_config: Option<&str>, _args: &Args) -> Result<()> {
+    anyhow::bail!(
+        "service management is not supported on {}",
+        std::env::consts::OS
+    )
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+fn uninstall_service() -> Result<()> {
+    anyhow::bail!(
+        "service management is not supported on {}",
+        std::env::consts::OS
+    )
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+fn service_status() -> Result<()> {
+    anyhow::bail!(
+        "service management is not supported on {}",
+        std::env::consts::OS
+    )
+}
+
 #[cfg(target_os = "linux")]
 fn is_root() -> bool {
     unsafe { libc::geteuid() == 0 }
