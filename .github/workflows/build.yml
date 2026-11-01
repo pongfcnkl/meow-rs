@@ -164,6 +164,7 @@ jobs:
       # cache built by another zigbuild points CMAKE_ASM_COMPILER at a
       # wrapper that no longer exists. Bump both together.
       - uses: Swatinem/rust-cache@v2
+        if: ${{ !matrix.android }}
         with:
           cache-on-failure: true
           key: release-${{ matrix.target }}-zigbuild-0.23.2
